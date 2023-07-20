@@ -176,6 +176,8 @@ func makeDeploymentSpec(request types.FunctionDeployment, existingSecrets map[st
 		return nil, err
 	}
 
+	directoryOrCreate := corev1.HostPathDirectoryOrCreate
+	fileOrCreate := corev1.HostPathFileOrCreate
 	deploymentSpec := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        request.Service,
@@ -231,6 +233,36 @@ func makeDeploymentSpec(request types.FunctionDeployment, existingSecrets map[st
 							ReadinessProbe:  probes.Readiness,
 							SecurityContext: &corev1.SecurityContext{
 								ReadOnlyRootFilesystem: &request.ReadOnlyRootFilesystem,
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "share_folder-volume",
+									MountPath: "/home/yuzishu/share_folder/",
+								},
+								{
+									Name:      "ipdos_manager_log-volume",
+									MountPath: "/dev/shm/ipdos_manager_log",
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "share_folder-volume",
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: "/home/yuzishu/share_folder/",
+									Type: &directoryOrCreate,
+								},
+							},
+						},
+						{
+							Name: "ipdos_manager_log-volume",
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: "/dev/shm/ipdos_manager_log",
+									Type: &fileOrCreate,
+								},
 							},
 						},
 					},

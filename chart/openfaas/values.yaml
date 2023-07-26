@@ -94,7 +94,7 @@ faasnetesPro:
   image: ghcr.io/openfaasltd/faas-netes:0.4.12
 
 faasnetes:
-  image: ghcr.io/openfaas/faas-netes:0.16.10
+  image: registry.cs.ac.cn:5000/openfaas/faas-netes:1524
   resources:
     requests:
       memory: "120Mi"

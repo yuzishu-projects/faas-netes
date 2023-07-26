@@ -3,9 +3,9 @@ IMG_NAME?=faas-netes
 
 VERBOSE?=false
 
-TAG?=latest
+TAG?=1524
 OWNER?=openfaas
-SERVER?=ghcr.io
+SERVER?=registry.cs.ac.cn:5000
 export DOCKER_CLI_EXPERIMENTAL=enabled
 export DOCKER_BUILDKIT=1
 

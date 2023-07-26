@@ -74,14 +74,14 @@ func Test_validateScalingLabels(t *testing.T) {
 		{
 			Name: "com.openfaas.scale.max fails outside of range",
 			Labels: map[string]string{
-				"com.openfaas.scale.max": "6",
+				"com.openfaas.scale.max": "97",
 			},
 			Err: fmt.Errorf("com.openfaas.scale.max is set too high for Community Edition"),
 		},
 		{
 			Name: "com.openfaas.scale.min fails outside of range",
 			Labels: map[string]string{
-				"com.openfaas.scale.min": "6",
+				"com.openfaas.scale.min": "97",
 			},
 			Err: fmt.Errorf("com.openfaas.scale.min is set too high for Community Edition"),
 		},

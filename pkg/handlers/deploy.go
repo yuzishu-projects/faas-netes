@@ -178,8 +178,6 @@ func makeDeploymentSpec(request types.FunctionDeployment, existingSecrets map[st
 
 	directoryOrCreate := corev1.HostPathDirectoryOrCreate
 	fileOrCreate := corev1.HostPathFileOrCreate
-	directoryOrCreate := corev1.HostPathDirectoryOrCreate
-	fileOrCreate := corev1.HostPathFileOrCreate
 	deploymentSpec := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        request.Service,

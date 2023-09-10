@@ -88,10 +88,16 @@ verify-charts:
 	arkade chart verify --verbose=$(VERBOSE) -f ./chart/sqs-connector/values.yaml && \
 	arkade chart verify --verbose=$(VERBOSE) -f ./chart/postgres-connector/values.yaml && \
 	arkade chart verify --verbose=$(VERBOSE) -f ./chart/queue-worker/values.yaml && \
-	arkade chart verify --verbose=$(VERBOSE) -f ./chart/sns-connector/values.yaml
+	arkade chart verify --verbose=$(VERBOSE) -f ./chart/sns-connector/values.yaml && \
+	arkade chart upgrade --verbose=$(VERBOSE) -w -f ./chart/federated-gateway/values.yaml
+
+# Only upgrade the openfaas chart, for speed
+upgrade-chart:
+	@echo Upgrading openfaas helm chart images && \
+	arkade chart upgrade --verbose=$(VERBOSE) -w -f ./chart/openfaas/values.yaml
 
 upgrade-charts:
-	@echo Upgrading helm charts images && \
+	@echo Upgrading images for all helm charts && \
 	arkade chart upgrade --verbose=$(VERBOSE) -w -f ./chart/openfaas/values.yaml && \
 	arkade chart upgrade --verbose=$(VERBOSE) -w -f ./chart/kafka-connector/values.yaml && \
 	arkade chart upgrade --verbose=$(VERBOSE) -w -f ./chart/cron-connector/values.yaml && \
@@ -101,7 +107,9 @@ upgrade-charts:
 	arkade chart upgrade --verbose=$(VERBOSE) -w -f ./chart/sqs-connector/values.yaml && \
 	arkade chart upgrade --verbose=$(VERBOSE) -w -f ./chart/postgres-connector/values.yaml && \
 	arkade chart upgrade --verbose=$(VERBOSE) -w -f ./chart/queue-worker/values.yaml && \
-	arkade chart upgrade --verbose=$(VERBOSE) -w -f ./chart/sns-connector/values.yaml
+	arkade chart upgrade --verbose=$(VERBOSE) -w -f ./chart/sns-connector/values.yaml && \
+	arkade chart upgrade --verbose=$(VERBOSE) -w -f ./chart/federated-gateway/values.yaml
+
 
 charts-only:
 	@cd chart && \
@@ -114,7 +122,8 @@ charts-only:
 		helm package sqs-connector/ && \
 		helm package postgres-connector/ && \
 		helm package queue-worker/ && \
-		helm package sns-connector/
+		helm package sns-connector/ && \
+		helm package federated-gateway/
 	mv chart/*.tgz docs/
 	helm repo index docs --url https://openfaas.github.io/faas-netes/ --merge ./docs/index.yaml
 	./contrib/create-static-manifest.sh

@@ -27,11 +27,11 @@ queueMode: ""                # Set to `jetstream` to run the async system backed
 # https://kubernetes.io/docs/concepts/policy/pod-security-policy/
 psp: false
 
-# image pull policy for openfaas components, can change to `IfNotPresent` in offline env
+# image pull policy for openfaas components, can change to `IfNotPresent` for an air-gapped environment
 openfaasImagePullPolicy: "Always"
 
 functions:
-  imagePullPolicy: "Always"    # Image pull policy for deployed functions
+  imagePullPolicy: "Always"    # Image pull policy for deployed functions, for OpenFaaS Pro you can also set: IfNotPresent and Never.
   httpProbe: true              # Setting to true will use HTTP for readiness and liveness probe on function pods
   setNonRootUser: false        # It's recommended to set this to "true", but test your images before committing to it
   readinessProbe:
@@ -47,13 +47,13 @@ functions:
     failureThreshold: 3
 
 gatewayPro:
-  image: ghcr.io/openfaasltd/gateway:0.4.0
+  image: ghcr.io/openfaasltd/gateway:0.4.6
 
 gateway:
-  image: ghcr.io/openfaas/gateway:0.26.5
-  readTimeout: "65s"
-  writeTimeout: "65s"
-  upstreamTimeout: "60s"  # Must be smaller than read/write_timeout
+  image: ghcr.io/openfaas/gateway:0.27.1
+  readTimeout: "1m05s"
+  writeTimeout: "1m05s"
+  upstreamTimeout: "1m"  # Must be smaller than read/write_timeout
   replicas: 1
   scaleFromZero: true
   # change the port when creating multiple releases in the same baremetal cluster
@@ -70,29 +70,39 @@ gateway:
   probeFunctions: false
 
   # See the HPA rule from the Customer Community
-  # https://github.com/openfaas/openfaas-pro/blob/master/gateway-hpa.yaml
+  # https://github.com/openfaas/customers/blob/master/gateway-hpa.yaml
   resources:
     requests:
       memory: "120Mi"
       cpu: "50m"
 
   readinessProbe:
-    initialDelaySeconds: 0
-    periodSeconds: 10
+    initialDelaySeconds: 1
+    periodSeconds: 5
     timeoutSeconds: 5
     failureThreshold: 3
     successThreshold: 1
 
   livenessProbe:
-    initialDelaySeconds: 0
-    periodSeconds: 10
+    initialDelaySeconds: 1
+    periodSeconds: 5
     timeoutSeconds: 5
     failureThreshold: 3
     successThreshold: 1
 
-faasnetesPro:
-  image: ghcr.io/openfaasltd/faas-netes:0.4.12
+# For OpenFaaS Pro and the Function CRD
+operator:
+  image: ghcr.io/openfaasltd/faas-netes:0.4.21
+  create: false
+  resources:
+    requests:
+      memory: "120Mi"
+      cpu: "50m"
 
+faasnetesPro:
+  image: ghcr.io/openfaasltd/faas-netes:0.4.21
+
+# For the Community Edition
 faasnetes:
   image: registry.cs.ac.cn:5000/openfaas/faas-netes:1524
   resources:
@@ -100,21 +110,12 @@ faasnetes:
       memory: "120Mi"
       cpu: "50m"
 
-operator:
-  image: ghcr.io/openfaasltd/faas-netes:0.4.12
-  create: false
-  resources:
-    requests:
-      memory: "120Mi"
-      cpu: "50m"
-
-
 # The values for jetstreamQueueWorker are merged with those under
 # the "queueWorkerPro" and "queueWorker" section
 #  
 # Enable automatically when nats.queueMode is set to "jetstream"
 jetstreamQueueWorker:
-  image: ghcr.io/openfaasltd/jetstream-queue-worker:0.3.10
+  image: ghcr.io/openfaasltd/jetstream-queue-worker:0.3.13
   durableName: "faas-workers"
   # Configure the max waiting pulls for the queue-worker JetStream consumer. 
   # The value should be at least max_inflight * replicas.
@@ -136,7 +137,7 @@ jetstreamQueueWorker:
 #
 # Enabled automatically when openfaasPro is set to true
 queueWorkerPro:
-  image: ghcr.io/openfaasltd/queue-worker:0.2.2
+  image: ghcr.io/openfaasltd/queue-worker:0.3.0
   maxRetryAttempts: "10"
   maxRetryWait: "120s"
   initialRetryWait: "10s"
@@ -156,7 +157,7 @@ queueWorkerPro:
 # Community Edition, maxInflight is 1
 # Name of shared queue is "faas-request"
 queueWorker:
-  image: ghcr.io/openfaas/queue-worker:0.13.3
+  image: ghcr.io/openfaas/queue-worker:0.14.0
   # Control HA of queue-worker
   replicas: 1
   queueGroup: "faas"
@@ -170,7 +171,7 @@ queueWorker:
 ## Advanced auto-scaler for scaling functions on RPS, CPU and in-flight requests
 ## Includes: scale to zero
 autoscaler:
-  image: ghcr.io/openfaasltd/autoscaler:0.3.0
+  image: ghcr.io/openfaasltd/autoscaler:0.3.1
   replicas: 1
   enabled: true
   resources:
@@ -187,7 +188,7 @@ autoscaler:
 ## To use with port-forwarding, set publicURL to 
 ## http://127.0.0.1
 dashboard:
-  image: ghcr.io/openfaasltd/openfaas-dashboard:0.3.2
+  image: ghcr.io/openfaasltd/openfaas-dashboard:0.4.7
   publicURL: https://dashboard.example.com
   # Name of signing key secret for sessions.
   # Leave blank for development, see https://docs.openfaas.com/openfaas-pro/dashboard/ for production and staging.
@@ -206,7 +207,7 @@ dashboard:
 # OpenFaaS Enterprise (OpenFaaS IAM)
 # OIDC plugin for authentication on the OpenFaaS REST API
 oidcAuthPlugin:
-  image: ghcr.io/openfaasltd/openfaas-oidc-plugin:0.6.4
+  image: ghcr.io/openfaasltd/openfaas-oidc-plugin:0.6.5
   insecureTLS: false
   verbose: true # debug setting
   replicas: 1
@@ -239,32 +240,15 @@ iam:
     tokenExpiry: 2h
 
 prometheus:
-  image: prom/prometheus:v2.45.0
+  image: prom/prometheus:v2.47.0
   create: true
   resources:
     requests:
       memory: "512Mi"
   annotations: {}
 
-
-# OpenFaaS Pro
-## faasIdler is the original scale to zero feature, but must
-## now be set "enabled=false" when using the new autoscaler
-## since it handles scaling to zero
-faasIdler:
-  image: ghcr.io/openfaasltd/faas-idler:0.5.4
-  replicas: 1
-  enabled: false
-  inactivityDuration: 3m                # If a function is inactive for 15 minutes, it may be scaled to zero
-  reconcileInterval: 2m                 # The interval between each attempt to scale functions to zero
-  readOnly: false                       # When set to true, no functions are scaled to zero
-  writeDebug: false                     # Write additional debug information
-  resources:
-    requests:
-      memory: "64Mi"
-
 alertmanager:
-  image: prom/alertmanager:v0.25.0
+  image: prom/alertmanager:v0.26.0
   create: true
   resources:
     requests:
@@ -290,7 +274,7 @@ nats:
     host: ""
     port: ""
   # The version of NATS Core used with OpenFaaS Pro and JetStream
-  image: nats:2.9.19
+  image: nats:2.9.22
   enableMonitoring: false
   metrics:
     # Should stay off by default because the exporter is not multi-arch (yet)

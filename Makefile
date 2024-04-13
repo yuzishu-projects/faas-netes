@@ -1,11 +1,12 @@
-.PHONY: build local push namespaces install charts start-kind stop-kind build-buildx render-charts verify-charts charts-only
+.PHONY: local publish-buildx publish-buildx-all namespaces install charts start-kind stop-kind build-buildx build-buildx-all render-charts verify-charts verify-chart charts-only bump-charts
+
 IMG_NAME?=faas-netes
 
 VERBOSE?=false
 
-TAG?=1524
+TAG?=latest
 OWNER?=openfaas
-SERVER?=registry.cs.ac.cn:5000
+SERVER?=ttl.sh
 export DOCKER_CLI_EXPERIMENTAL=enabled
 export DOCKER_BUILDKIT=1
 
@@ -20,6 +21,9 @@ GIT_COMMIT := $(shell git rev-parse HEAD)
 
 all: build-docker
 
+local:
+	CGO_ENABLED=0 GOOS=linux go build -o faas-netes
+
 $(TOOLS_DIR)/code-generator.mod: go.mod
 	@echo "syncing code-generator tooling version"
 	@cd $(TOOLS_DIR) && go mod edit -require "k8s.io/code-generator@${CODEGEN_VERSION}"
@@ -27,9 +31,6 @@ $(TOOLS_DIR)/code-generator.mod: go.mod
 ${CODEGEN_PKG}: $(TOOLS_DIR)/code-generator.mod
 	@echo "(re)installing k8s.io/code-generator-${CODEGEN_VERSION}"
 	@cd $(TOOLS_DIR) && go mod download -modfile=code-generator.mod
-
-local:
-	CGO_ENABLED=0 GOOS=linux go build -o faas-netes
 
 build-docker:
 	docker build \
@@ -42,7 +43,7 @@ build-buildx:
 	@echo $(SERVER)/$(OWNER)/$(IMG_NAME):$(TAG) && \
 	docker buildx create --use --name=multiarch --node=multiarch && \
 	docker buildx build \
-		--push \
+		--output "type=image,push=false" \
 		--platform linux/amd64 \
         --build-arg GIT_COMMIT=$(GIT_COMMIT) \
         --build-arg VERSION=$(VERSION) \
@@ -72,8 +73,17 @@ publish-buildx-all:
 		--tag $(SERVER)/$(OWNER)/$(IMG_NAME):$(TAG) \
 		.
 
-push:
-	docker push $(SERVER)/$(OWNER)/$(IMG_NAME):$(TAG)
+.PHONY: publish-buildx
+publish-buildx:
+	@echo  $(SERVER)/$(OWNER)/$(IMG_NAME):$(TAG) && \
+	docker buildx create --use --name=multiarch --node=multiarch && \
+	docker buildx build \
+		--platform linux/amd64 \
+		--push=true \
+        --build-arg GIT_COMMIT=$(GIT_COMMIT) \
+        --build-arg VERSION=$(VERSION) \
+		--tag $(SERVER)/$(OWNER)/$(IMG_NAME):$(TAG) \
+		.
 
 charts: verify-charts charts-only
 
@@ -90,6 +100,10 @@ verify-charts:
 	arkade chart verify --verbose=$(VERBOSE) -f ./chart/queue-worker/values.yaml && \
 	arkade chart verify --verbose=$(VERBOSE) -f ./chart/sns-connector/values.yaml && \
 	arkade chart upgrade --verbose=$(VERBOSE) -w -f ./chart/federated-gateway/values.yaml
+
+verify-chart:
+	@echo Verifying helm chart images in remote registries && \
+	arkade chart verify --verbose=$(VERBOSE) -f ./chart/openfaas/values.yaml
 
 # Only upgrade the openfaas chart, for speed
 upgrade-chart:
@@ -110,6 +124,19 @@ upgrade-charts:
 	arkade chart upgrade --verbose=$(VERBOSE) -w -f ./chart/sns-connector/values.yaml && \
 	arkade chart upgrade --verbose=$(VERBOSE) -w -f ./chart/federated-gateway/values.yaml
 
+bump-charts:
+	arkade chart bump --file ./chart/openfaas/Chart.yaml -w && \
+	arkade chart bump --file ./chart/kafka-connector/Chart.yaml -w && \
+	arkade chart bump --file ./chart/cron-connector/Chart.yaml -w && \
+	arkade chart bump --file ./chart/nats-connector/Chart.yaml -w && \
+	arkade chart bump --file ./chart/mqtt-connector/Chart.yaml -w && \
+	arkade chart bump --file ./chart/pro-builder/Chart.yaml -w && \
+	arkade chart bump --file ./chart/sqs-connector/Chart.yaml -w && \
+	arkade chart bump --file ./chart/postgres-connector/Chart.yaml -w && \
+	arkade chart bump --file ./chart/queue-worker/Chart.yaml -w && \
+	arkade chart bump --file ./chart/sns-connector/Chart.yaml -w && \
+	arkade chart bump --file ./chart/federated-gateway/Chart.yaml -w
+	
 
 charts-only:
 	@cd chart && \

@@ -18,19 +18,20 @@ spec:
         app: prometheus
       annotations:
         sidecar.istio.io/inject: "true"
-        checksum/prometheus-config: "fd2cf97c8393823b5cb6f26ead4c8a11e82841db7fa2739910283dbbcdf920b4"
+        checksum/prometheus-config: "d0cf5897353b8c6c38ad818d603ff0cb26b9042c2019481024bc2d8861c65912"
     spec:
       serviceAccountName: openfaas-prometheus
       containers:
       - name: prometheus
         resources:
             requests:
+              cpu: 100m
               memory: 512Mi
-        image: prom/prometheus:v2.47.0
+        image: prom/prometheus:v2.51.1
         command:
           - "prometheus"
           - "--config.file=/etc/prometheus/prometheus.yml"
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
             path: /-/healthy

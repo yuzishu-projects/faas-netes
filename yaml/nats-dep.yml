@@ -23,9 +23,10 @@ spec:
       - name:  nats
         resources:
             requests:
+              cpu: 100m
               memory: 120Mi
-        image: nats-streaming:0.25.5
-        imagePullPolicy: Always
+        image: nats-streaming:0.25.6
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 4222
           protocol: TCP
@@ -35,3 +36,9 @@ spec:
           - memory
           - --cluster_id
           - faas-cluster
+        volumeMounts:
+        - mountPath: /tmp/nats
+          name: nats-data
+      volumes:
+      - name: nats-data
+        emptyDir: {}

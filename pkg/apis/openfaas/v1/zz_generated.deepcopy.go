@@ -253,6 +253,16 @@ func (in *ProfileSpec) DeepCopyInto(out *ProfileSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.DNSConfig != nil {
+		in, out := &in.DNSConfig, &out.DNSConfig
+		*out = new(corev1.PodDNSConfig)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.Resources != nil {
+		in, out := &in.Resources, &out.Resources
+		*out = new(corev1.ResourceRequirements)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

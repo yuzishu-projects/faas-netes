@@ -24,13 +24,13 @@ spec:
         secret:
           secretName: basic-auth
       containers:
-      - name:  queue-worker
+      - name: queue-worker
         resources:
             requests:
               cpu: 50m
               memory: 120Mi
-        image: ghcr.io/openfaas/queue-worker:0.14.0
-        imagePullPolicy: Always
+        image: ghcr.io/openfaas/queue-worker:0.14.1
+        imagePullPolicy: IfNotPresent
         env:
         - name: faas_nats_address
           value: "nats.openfaas.svc.cluster.local"

@@ -34,20 +34,17 @@ spec:
       - name: auth
         secret:
           secretName: basic-auth
-      terminationGracePeriodSeconds: 1
+      # terminationGracePeriodSeconds: 1
       containers:
       - name: gateway
         resources:
             requests:
-              cpu: 50m
+              cpu: 100m
               memory: 120Mi
-        image: ghcr.io/openfaas/gateway:0.27.1
-        imagePullPolicy: Always
+        image: ghcr.io/openfaas/gateway:0.27.6
+        imagePullPolicy: IfNotPresent
         command:
           - ./gateway
-        securityContext:
-          readOnlyRootFilesystem: true
-          runAsUser: 10001
         livenessProbe:
           initialDelaySeconds: 1
           periodSeconds: 5
@@ -99,6 +96,8 @@ spec:
           value: "1024"
         - name: probe_functions
           value: "false"
+        - name: async
+          value: "true"
         volumeMounts:
         # - name: faas-auth
         #   mountPath: /var/run/secrets/faas-auth
@@ -109,19 +108,18 @@ spec:
         - name: http
           containerPort: 8080
           protocol: TCP
+        - name: gw-metrics
+          containerPort: 8082
+          protocol: TCP
       - name: faas-netes
         resources:
             requests:
-              cpu: 50m
+              cpu: 100m
               memory: 120Mi
-        image: ghcr.io/openfaas/faas-netes:0.17.1
-        imagePullPolicy: Always
-        securityContext:
-          readOnlyRootFilesystem: true
-          runAsUser: 10001
+        image: ghcr.io/openfaas/faas-netes:0.18.4
+        imagePullPolicy: IfNotPresent
         command:
           - ./faas-netes
-          - -operator=false
         env:
         - name: port
           value: "8081"
@@ -163,6 +161,10 @@ spec:
           value: "true"
         - name: secret_mount_path
           value: "/var/secrets"
+        - name: "debug"
+          value: "false"
+        - name: "log_encoding"
+          value: "console"
         volumeMounts:
         - name: auth
           readOnly: true
@@ -170,5 +172,6 @@ spec:
         - mountPath: /tmp
           name: faas-netes-temp-volume
         ports:
-        - containerPort: 8081
+        - name: provider
+          containerPort: 8081
           protocol: TCP

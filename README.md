@@ -3,14 +3,13 @@ faas-netes - Serverless Functions For Kubernetes with OpenFaaS
 
 [![Build Status](https://github.com/openfaas/faas-netes/workflows/build/badge.svg?branch=master)](https://github.com/openfaas/faas-netes/actions)
 [![Go Report Card](https://goreportcard.com/badge/github.com/openfaas/faas-netes)](https://goreportcard.com/report/github.com/openfaas/faas-netes)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![OpenFaaS](https://img.shields.io/badge/openfaas-serverless-blue.svg)](https://www.openfaas.com)
 
 ## Introduction
 
 `faas-netes` is an [OpenFaaS provider](https://github.com/openfaas/faas-provider) which enables Kubernetes for [OpenFaaS](https://github.com/openfaas/faas). It's part of a larger stack that brings a cloud-agnostic serverless experience to Kubernetes.
 
-The existing REST API, CLI and UI are fully compatible. With OpenFaaS Pro, you have an optional *operator* mode so that you can manage functions with `kubectl` and a `CustomResource`.
+The existing REST API, CLI and UI are fully compatible. With OpenFaaS Standard/Enterprise, you have an optional *operator* mode so that you can manage functions with `kubectl` and a `CustomResource`.
 
 You can deploy OpenFaaS to any Kubernetes service - whether managed or local, including to OpenShift. You will find any specific instructions and additional links in the documentation.
 
@@ -21,6 +20,7 @@ You can deploy OpenFaaS to any Kubernetes service - whether managed or local, in
 
 ## Highlights
 
+* Free for personal & non-commercial use. Commercial use limited to 60 days, then you [must buy a license](https://openfaas.com/pricing/).
 * Platform for deploying [serverless-style workloads](https://docs.openfaas.com/reference/workloads/) - microservices and functions
 * Native Kubernetes integrations (API and ecosystem)
 * Built-in UI portal
@@ -48,6 +48,10 @@ Commercial options:
 * Multiple namespace support
 * gVisor support and runtimeClass for isolation
 * Affinity and advanced scheduling / security constraints
+* Airgap
+* RBAC/IAM & SSO
+
+Find out more: [OpenFaaS Standard and For Enterprises](https://www.openfaas.com/pricing)
 
 ## Get started
 
@@ -65,18 +69,15 @@ Read more: [Introducing PLONK](https://www.openfaas.com/blog/plonk-stack/).
 
 The rest of this document is dedicated to technical and operational information for the controller.
 
-### Operating modes - classic or operator
+### Operating modes - "controller" or operator
 
-There are two modes available for faas-netes, the classic mode is the default.
+There are two modes available for faas-netes, the operator mode is supported for production. The controller mode is legacy and will be removed in a future release. We are unable to support new customers who use the controller mode, and it may not have feature parity with the operator mode.
 
-* Classic mode (aka faas-netes) - includes a REST API,  multiple-namespace support but no Function CRD - available in Community Edition and OpenFaaS Pro/Enteprise
-* Operator mode (aka "The OpenFaaS Operator") - includes a REST API, with a "Function" CRD and multiple-namespace [OpenFaaS Pro/Enterprise](https://openfaas.com/pricing/)
+The controller mode is the only option for OpenFaaS Community Edition (CE).
 
-See also: [README for "The OpenFaaS Operator"](README-OPERATOR.md)
+See also: [How and why you should upgrade to the Function Custom Resource Definition (CRD)](https://www.openfaas.com/blog/upgrade-to-the-function-crd/)
 
-The single faas-netes image and binary contains both modes, switch between one or the other using the helm chart or the flag `-operator=true/false`.
-
-### Configuration of the controller
+### Configuration of this component
 
 faas-netes can be configured with environment variables, but for a full set of options see the [helm chart](./chart/openfaas/).
 
@@ -110,7 +111,7 @@ To configure ingress see the `helm` chart. By default NodePorts are used. These 
 
 By default functions are exposed at `http://gateway:8080/function/NAME`.
 
-You can also use the [IngressOperator to set up custom domains and HTTP paths](https://github.com/openfaas-incubator/ingress-operator)
+You can also use the [IngressOperator to set up custom domains and HTTP paths](https://github.com/openfaas/ingress-operator)
 
 ### Image pull policy
 

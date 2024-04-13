@@ -442,6 +442,7 @@ yaml) |
 | `basicAuthPlugin.image` | Container image used for basic-auth-plugin | See [values.yaml](./values.yaml) |
 | `basicAuthPlugin.replicas` | Replicas of the basic-auth-plugin | `1` |
 | `basicAuthPlugin.resources` | Resource limits and requests for basic-auth-plugin containers | See [values.yaml](./values.yaml) |
+| `caBundleSecretName` | Name of the Kubernetes secret that contains the CA bundle for making HTTP requests for IAM (optional) | `""` |
 | `clusterRole` | Use a `ClusterRole` for the Operator or faas-netes. Set to `true` for multiple namespace, pro scaler and CPU/RAM metrics in OpenFaaS REST API | `false` |
 | `createCRDs` | Create the CRDs for OpenFaaS Functions and Profiles | `true` |
 | `exposeServices` | Expose `NodePorts/LoadBalancer`  | `true` |
@@ -455,9 +456,10 @@ yaml) |
 | `nodeSelector` | Global [NodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) | `{}` |
 | `openfaasImagePullPolicy` | Image pull policy for openfaas components, can change to `IfNotPresent` in offline env | `Always` |
 | `openfaasPro` | Deploy OpenFaaS Pro | `false` |
+| `oem` | Deploy OpenFaaS oem | `false` |
 | `psp` | Enable [Pod Security Policy](https://kubernetes.io/docs/concepts/policy/pod-security-policy/) for OpenFaaS accounts | `false` |
 | `rbac` | Enable RBAC | `true` |
-| `securityContext` | Deploy with a `securityContext` set, this can be disabled for use with Istio sidecar injection | `true` |
+| `securityContext` | Give a `securityContext` template to be applied to each of the various containers in this chart, set to `{}` to disable, if required for Istio side-car injection.  | See values.yaml |
 | `serviceType` | Type of external service to use `NodePort/LoadBalancer` | `NodePort` |
 | `tolerations` | Global [Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) | `[]` |
 
@@ -489,10 +491,19 @@ yaml) |
 | `faasnetes.resources` | Resource limits and requests for faas-netes container | See [values.yaml](./values.yaml) |
 | `faasnetes.writeTimeout` | Write timeout for the faas-netes API | `""` (defaults to gateway.writeTimeout) |
 | `faasnetesPro.image` | Container image used for faas-netes when `openfaasPro=true` | See [values.yaml](./values.yaml) |
+| `faasnetesOem.image` | Container image used for faas-netes when `oem=true` | See [values.yaml](./values.yaml) |
+| `faasnetesPro.logs.format` | Set the log format, supports `console` or `json` | `console` |
+| `faasnetesPro.logs.debug` | Print debug logs | `false` |
 | `operator.create` | Use the OpenFaaS operator CRD controller, default uses faas-netes as the Kubernetes controller | `false` |
 | `operator.image` | Container image used for the openfaas-operator | See [values.yaml](./values.yaml) |
 | `operator.resources` | Resource limits and requests for openfaas-operator containers | See [values.yaml](./values.yaml) |
 | `operator.image` | Container image used for the openfaas-operator | See [values.yaml](./values.yaml) |
+| `operator.kubeClientQPS` | QPS rate-limit for the Kubernetes client, (OpenFaaS for Enterprises) | `""` (defaults to 100) |
+| `operator.kubeClientBurst` | Burst rate-limit for the Kubernetes client (OpenFaaS for Enterprises) | `""` (defaults to 250) |
+| `operator.reconcileWorkers` | Number of reconciliation workers to run to convert Function CRs into Deployments | `1` |
+| `operator.logs.format` | Set the log format, supports `console` or `json` | `console` |
+| `operator.logs.debug`           | Print debug logs    | `false`                        |
+| `operator.leaderElection.enabled`| When set to true, only one replica of the operator within the gateway pod will perform reconciliation | `false` |
 
 ### Functions
 
@@ -531,14 +542,11 @@ yaml) |
 | `jetstreamQueueWorker.logs.debug` | Log debug messages | `false` |
 | `jetstreamQueueWorker.logs.format` | Set the log format, supports `console` or `json` | `console` |
 | `nats.channel` | The name of the NATS Streaming channel or NATS JetStream stream to use for asynchronous function invocations | `faas-request` |
-| `nats.enableMonitoring` | Enable the NATS monitoring endpoints on port `8222` for NATS Streaming deployments managed by this chart | `false` |
 | `nats.external.clusterName` | The name of the externally-managed NATS Streaming server | `""` |
 | `nats.external.enabled` | Whether to use an externally-managed NATS Streaming server | `false` |
 | `nats.external.host` | The host at which the externally-managed NATS Streaming server can be reached | `""` |
 | `nats.external.port` | The port at which the externally-managed NATS Streaming server can be reached | `""` |
 | `nats.image` | Container image used for NATS | See [values.yaml](./values.yaml) |
-| `nats.metrics.enabled` | Export Prometheus metrics for NATS, no multi-arch support  | `false` |
-| `nats.metrics.image` | Container image used for the NATS Prometheus exporter | See [values.yaml](./values.yaml) |
 | `nats.resources` | Resource limits and requests for the nats pods | See [values.yaml](./values.yaml) |
 | `nats.streamReplication` | JetStream stream replication factor. For production a value of at least 3 is recommended. | `1` |
 | `queueWorker.ackWait` | Max duration of any async task/request | `60s` |
@@ -594,6 +602,23 @@ yaml) |
 | `oidcAuthPlugin.replicas` | Replicas of the oidc-auth-plugin | `1` |
 | `oidcAuthPlugin.resources` | Resource limits and requests for the oidc-auth-plugin containers | See [values.yaml](./values.yaml) |
 | `oidcAuthPlugin.verbose` | Enable verbose logging | `false` |
+
+### Event subscriptions
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `eventSubscription.endpoint` | The webhook endpoint to receive events. | `""`|
+| `eventSubscription.endpointSecret` | Name of the Kubernetes secret that contains the secret key for signing webhook requests. | `""` |
+| `eventSubscription.insecureTLS` | Enable insecure TLS for webhook invocations | `false` |
+| `eventSubscription.metering.enabled` | Enable metering events. | `false` |
+| `eventSubscription.metering.defaultRAM` | Default memory value used in function_usage events for metering when no memory limit is set on the function.  | `512Mi` |
+| `eventSubscription.metering.excludedNamespaces` | Comma-separated list of namespaces to exclude from metering for when functions are used to handle the metering webhook events | `""` |
+| `eventSubscription.auditing.enabled` | Enable auditing events | `false` |
+| `eventSubscription.auditing.httpVerbs` | Comma-separated list of HTTP methods to audit | `"PUT,POST,DELETE"`|
+| `eventWorker.image` | Container image used for the events-worker | See [values.yaml](./values.yaml) |
+| `eventWorker.resources` |  Resource limits and requests for the event-worker container | See [values.yaml](./values.yaml) |
+| `eventWorker.logs.format` | Set the log format, supports `console` or `json` | `console` |
+| `eventWorker.logs.debug` | Print debug logs    | `false` |
 
 ### faas-idler (OpenFaaS Pro)
 

@@ -29,11 +29,10 @@ import (
 const initialReplicasCount = 1
 
 // MakeDeployHandler creates a handler to create new functions in the cluster
-func MakeDeployHandler(functionNamespace string, factory k8s.FunctionFactory) http.HandlerFunc {
+func MakeDeployHandler(functionNamespace string, factory k8s.FunctionFactory, functionList *k8s.FunctionList) http.HandlerFunc {
 	secrets := k8s.NewSecretsClient(factory.Client)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
 
 		if r.Body != nil {
 			defer r.Body.Close()
@@ -72,23 +71,12 @@ func MakeDeployHandler(functionNamespace string, factory k8s.FunctionFactory) ht
 			return
 		}
 
+		if err := isAnonymous(request.Image); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
 		deploymentSpec, specErr := makeDeploymentSpec(request, existingSecrets, factory)
-
-		var profileList []k8s.Profile
-		if request.Annotations != nil {
-			profileNamespace := factory.Config.ProfilesNamespace
-			profileList, err = factory.GetProfiles(ctx, profileNamespace, *request.Annotations)
-			if err != nil {
-				wrappedErr := fmt.Errorf("failed create Deployment spec: %s", err.Error())
-				log.Println(wrappedErr)
-				http.Error(w, wrappedErr.Error(), http.StatusBadRequest)
-				return
-			}
-		}
-		for _, profile := range profileList {
-			factory.ApplyProfile(profile, deploymentSpec)
-		}
-
 		if specErr != nil {
 			wrappedErr := fmt.Errorf("failed create Deployment spec: %s", specErr.Error())
 			log.Println(wrappedErr)
@@ -96,10 +84,21 @@ func MakeDeployHandler(functionNamespace string, factory k8s.FunctionFactory) ht
 			return
 		}
 
-		deploy := factory.Client.AppsV1().Deployments(namespace)
-
-		_, err = deploy.Create(context.TODO(), deploymentSpec, metav1.CreateOptions{})
+		count, err := functionList.Count()
 		if err != nil {
+			err := fmt.Errorf("unable to count functions: %s", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if count+1 > MaxFunctions {
+			err := fmt.Errorf("unable to create function, maximum: %d, visit https://openfaas.com/pricing to upgrade to OpenFaaS Standard", MaxFunctions)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		deploy := factory.Client.AppsV1().Deployments(namespace)
+		if _, err = deploy.Create(context.TODO(), deploymentSpec, metav1.CreateOptions{}); err != nil {
 			wrappedErr := fmt.Errorf("unable create Deployment: %s", err.Error())
 			log.Println(wrappedErr)
 			http.Error(w, wrappedErr.Error(), http.StatusInternalServerError)
@@ -146,8 +145,6 @@ func makeDeploymentSpec(request types.FunctionDeployment, existingSecrets map[st
 			labels[k] = v
 		}
 	}
-
-	nodeSelector := createSelector(request.Constraints)
 
 	resources, err := createResources(request)
 
@@ -203,7 +200,7 @@ func makeDeploymentSpec(request types.FunctionDeployment, existingSecrets map[st
 					Annotations: annotations,
 				},
 				Spec: corev1.PodSpec{
-					NodeSelector: nodeSelector,
+					NodeSelector: map[string]string{},
 					Containers: []corev1.Container{
 						{
 							Name:  request.Service,
@@ -323,7 +320,7 @@ func buildAnnotations(request types.FunctionDeployment) (map[string]string, erro
 		}
 	}
 
-	for k, _ := range annotations {
+	for k := range annotations {
 		if strings.Contains(k, "amazonaws.com") || strings.Contains(k, "gke.io") {
 			return nil, fmt.Errorf("annotation %q is not supported in the Community Edition", k)
 		}
@@ -361,22 +358,6 @@ func buildEnvVars(request *types.FunctionDeployment) []corev1.EnvVar {
 
 func int32p(i int32) *int32 {
 	return &i
-}
-
-func createSelector(constraints []string) map[string]string {
-	selector := make(map[string]string)
-
-	if len(constraints) > 0 {
-		for _, constraint := range constraints {
-			parts := strings.Split(constraint, "=")
-
-			if len(parts) == 2 {
-				selector[parts[0]] = parts[1]
-			}
-		}
-	}
-
-	return selector
 }
 
 func createResources(request types.FunctionDeployment) (*corev1.ResourceRequirements, error) {

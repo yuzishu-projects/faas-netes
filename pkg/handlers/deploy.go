@@ -221,18 +221,18 @@ func makeDeploymentSpec(request types.FunctionDeployment, existingSecrets map[st
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "dev-shm-volume",
-									MountPath: "/dev/shm/",
+									Name:      "share-folder-volume",
+									MountPath: "/home/yuzishu/share_folder/",
 								},
 							},
 						},
 					},
 					Volumes: []corev1.Volume{
 						{
-							Name: "dev-shm-volume",
+							Name: "share-folder-volume",
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/dev/shm/",
+									Path: "/home/yuzishu/share_folder/",
 									Type: &directoryOrCreate,
 								},
 							},
